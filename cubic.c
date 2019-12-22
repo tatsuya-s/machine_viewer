@@ -766,14 +766,6 @@ void mouse(int button, int state, int x, int y)
 
 void motion(int x, int y) { mouse(GLUT_LEFT_BUTTON, GLUT_MOVE, x, y); }
 
-/* demo-data file name */
-char *demo00[9] = {"","","demo00.222","demo00.333","demo00.444","demo00.555",
-		   "demo00.666","demo00.777","demo00.888" };
-char *demo01[9] = {"","","demo01.222","demo01.333","demo01.444","demo01.555",
-		   "demo01.666","demo01.777","demo01.888"};
-char *demo02[9] = {"","","demo02.222","demo02.333","demo02.444","demo02.555",
-		   "demo02.666","demo02.777","demo02.888"};
-
 void makeAction(int c)
 {
     void writeLog(char *);
@@ -827,9 +819,6 @@ void makeAction(int c)
     case 1006: dangle = 90.0/ 64; break;
     case 1007: dangle = 90.0/128; break;
     case 1008: dangle = 90.0/256; break;
-    case 2000: trace_stack=scramble=0; initCubic(); DataFile=demo00[N]; break;
-    case 2001: trace_stack=scramble=0; initCubic(); DataFile=demo01[N]; break;
-    case 2002: trace_stack=scramble=0; initCubic(); DataFile=demo02[N]; break;
     case 3002: N=2; initCamera(); trace_stack=scramble=0; initCubic(); break;
     case 3003: N=3; initCamera(); trace_stack=scramble=0; initCubic(); break;
     case 3004: N=4; initCamera(); trace_stack=scramble=0; initCubic(); break;
@@ -863,7 +852,7 @@ void skey(int k, int x, int y)
 
 void makeMenu(void)
 {
-    GLint demo, rot_step, cube_size;
+    GLint rot_step, cube_size;
     cube_size = glutCreateMenu(makeAction); {
         glutAddMenuEntry(" 2",            3002);
         glutAddMenuEntry(" 3",            3003);
@@ -881,11 +870,6 @@ void makeMenu(void)
         glutAddMenuEntry("128",           1007);
         glutAddMenuEntry("256",           1008);
     }
-    demo = glutCreateMenu(makeAction); {
-        glutAddMenuEntry(" demo00",       2000);
-        glutAddMenuEntry(" demo01",       2001);
-        glutAddMenuEntry(" demo02",       2002);
-    }
     glutCreateMenu(makeAction); {
         glutAddMenuEntry("Undo",             'b');
         glutAddMenuEntry("Redo",             'f');
@@ -897,7 +881,6 @@ void makeMenu(void)
         glutAddMenuEntry("Move away",        'd');
         glutAddSubMenu("Cubic Size",   cube_size);
         glutAddSubMenu("Rotation Step", rot_step);
-        glutAddSubMenu("Demonstration",     demo);
         glutAddMenuEntry("Save Image (cubic.bmp)", 'M');
         glutAddMenuEntry("Quit",             'q');
     }
