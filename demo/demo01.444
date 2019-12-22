@@ -1,0 +1,68 @@
+4N
+# Snake 2
+R
+
+# Snake 3
+R
+ 12l 34ii 34u 34k 2j
+ 34i 34j 34ii 12o 34k
+ 12jj 12o 12j 2i 12u 12l 12jj 34i
+1234oooo
+
+# Snake 1
+R
+12i 3oo 12k 34uu 2k 34uu 3k 12ll 3i 34oo 3k 12ll 3i 34oo
+#
+1234oooo
+
+# 6 bars
+R
+4uu 4ii 23uu 1kk 3uu 23oo 34uu 23oo
+#
+1234oooo
+
+# Swapped 333 cubes [h.]
+R
+ 4uu 1kk 1l 4j
+ 12jj 4ii 2jj
+ 34ii 2jj 3ii
+ 4l 4i 1jj 4k
+ 23l 4i 23uu 4k
+ 1l 4i
+#
+1234oooo
+
+# cube in cube
+R
+ 4j 2kk 4u 4ii
+ 2j 4l 2u 12o
+ 2j 4o 2u 12l
+ 4ii 4j 2kk 4u
+#
+ 1234oooo
+
+# 4-checker
+R
+ 13oo
+ 13ii
+ 13uu
+ 13kk
+#
+ 1234oooo
+
+# 4-Diagonal
+R
+ 4o 4uu 1k 4uu
+ 4oo 1ll
+ 1jj 4i  1jj
+ 4o 1ll
+ 1234oooo
+ 3l 1kk
+ 34uu
+ 4o 1o
+ 2kk
+ 4l 1l
+ 4uu 1kk 3o
+#
+ 1234oooo
+###############################
