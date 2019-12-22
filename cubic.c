@@ -240,7 +240,7 @@ void put_stickers(int i, int N)
     if(k==0) { // -Y
     // orange plastic
     GLfloat orange_ambient[]  = {0.2f, 0.0f, 0.0f, 1.0f};
-    GLfloat orange_diffuse[]  = {1.0f, 0.1f, 0.0f, 1.0f};
+    GLfloat orange_diffuse[]  = {0.8f, 0.5f, 0.0f, 1.0f};
     GLfloat orange_specular[] = {0.8f, 0.8f, 0.7f, 1.0f};
     glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   orange_ambient);
     glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   orange_diffuse);
@@ -344,7 +344,7 @@ typedef struct {
 /*****************************************
  * main Object
  ----------------------------------------*/
-int N = 3; // Cubic-Size
+int N = 4; // Cubic-Size
 
 #define MAXSIZE 8
 Cubic cubic[ MAXSIZE * MAXSIZE * MAXSIZE ];
