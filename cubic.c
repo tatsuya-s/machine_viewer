@@ -195,7 +195,7 @@ void put_stickers(int i, int N)
     GLfloat ff = ee - ((N==2)?.02:.04);
     int j=(i%N), k=(i%(N*N))/N, l=(i/(N*N));
 
-    if(j==0) { // -X
+    if(j==0) { // B
     // yellow plastic
     GLfloat yellow_ambient[]  = {0.2f, 0.2f, 0.0f, 1.0f};
     GLfloat yellow_diffuse[]  = {0.7f, 0.7f, 0.0f, 1.0f};
@@ -216,14 +216,14 @@ void put_stickers(int i, int N)
 	glVertex3f(-dd, -ee,  ff);
 	glEnd();
     }
-    if(j==N-1) { //  X
-    // green plastic
-    GLfloat green_ambient[]  = {0.0f, 0.1f, 0.0f, 1.0f};
-    GLfloat green_diffuse[]  = {0.0f, 0.4f, 0.1f, 1.0f};
-    GLfloat green_specular[] = {0.8f, 0.8f, 0.8f, 1.0f};
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   green_ambient);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   green_diffuse);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  green_specular);
+    if(j==N-1) { // F
+    // white plastic
+    GLfloat white_ambient[]  = {0.2f, 0.2f, 0.2f, 1.0f};
+    GLfloat white_diffuse[]  = {0.7f, 0.7f, 0.8f, 1.0f};
+    GLfloat white_specular[] = {0.8f, 0.8f, 0.8f, 1.0f};
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   white_ambient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   white_diffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  white_specular);
     glMaterialf (GL_FRONT_AND_BACK, GL_SHININESS, 70.4f);
 	glBegin(GL_POLYGON);
 	glNormal3f( 1.,  0.,  0.);
@@ -237,7 +237,7 @@ void put_stickers(int i, int N)
 	glVertex3f( dd, -ee, -ff);
 	glEnd();
     }
-    if(k==0) { // -Y
+    if(k==0) { // L
     // orange plastic
     GLfloat orange_ambient[]  = {0.2f, 0.0f, 0.0f, 1.0f};
     GLfloat orange_diffuse[]  = {0.8f, 0.5f, 0.0f, 1.0f};
@@ -258,7 +258,7 @@ void put_stickers(int i, int N)
 	glVertex3f( ff, -dd, -ee);
 	glEnd();
     }
-    if(k==N-1) { //  Y 
+    if(k==N-1) { // R
     // red plastic
     GLfloat red_ambient[]  = {0.0f, 0.0f, 0.0f, 1.0f};
     GLfloat red_diffuse[]  = {0.7f, 0.0f, 0.0f, 1.0f};
@@ -279,7 +279,7 @@ void put_stickers(int i, int N)
 	glVertex3f(-ff,  dd, -ee);
 	glEnd();
     }
-    if (l==0) { // -Z
+    if (l==0) { // D
     // blue plastic
     GLfloat blue_ambient[]  = {0.0f, 0.0f, 0.1f, 1.0f};
     GLfloat blue_diffuse[]  = {0.0f, 0.0f, 0.6f, 1.0f};
@@ -300,14 +300,14 @@ void put_stickers(int i, int N)
 	glVertex3f(-ee,  ff, -dd);
 	glEnd();
     }
-    if(l==N-1) { // Z
-    // white plastic
-    GLfloat white_ambient[]  = {0.2f, 0.2f, 0.2f, 1.0f};
-    GLfloat white_diffuse[]  = {0.7f, 0.7f, 0.8f, 1.0f};
-    GLfloat white_specular[] = {0.8f, 0.8f, 0.8f, 1.0f};
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   white_ambient);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   white_diffuse);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  white_specular);
+    if(l==N-1) { // U
+    // green plastic
+    GLfloat green_ambient[]  = {0.0f, 0.1f, 0.0f, 1.0f};
+    GLfloat green_diffuse[]  = {0.0f, 0.4f, 0.1f, 1.0f};
+    GLfloat green_specular[] = {0.8f, 0.8f, 0.8f, 1.0f};
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,   green_ambient);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   green_diffuse);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  green_specular);
     glMaterialf (GL_FRONT_AND_BACK, GL_SHININESS, 70.4f);
 	glBegin(GL_POLYGON);
 	glNormal3f( 0.,  0.,  1.);
@@ -377,16 +377,56 @@ char *DataFile = NULL;
  ----------------------------------------*/
 void initCubic(void)
 {
-    extern int N; // Cubic-Size;
     Matrix E = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
     int i;
     for (i = 0; i < N*N*N; i++) {
-	memcpy(cubic[i].M, E, sizeof(Matrix)); 
-	cubic[i].M[12] = (i%N)       - .5*(N-1);
-	cubic[i].M[13] = (i%(N*N))/N - .5*(N-1);
-	cubic[i].M[14] = (i/(N*N))   - .5*(N-1);
+        memcpy(cubic[i].M, E, sizeof(Matrix)); 
+        cubic[i].M[12] = (i%N)       - .5*(N-1);
+        cubic[i].M[13] = (i%(N*N))/N - .5*(N-1);
+        cubic[i].M[14] = (i/(N*N))   - .5*(N-1);
     }
     asp = act;
+}
+
+void printCube(void)
+{
+    int i;
+    for (i = 0; i < N*N*N; i++) {
+        //printf("%f,%f,%f\n",   cubic[i].M[0], cubic[i].M[4], cubic[i].M[8]);
+        //printf("%f,%f,%f\n",   cubic[i].M[1], cubic[i].M[5], cubic[i].M[9]);
+        //printf("%f,%f,%f\n\n", cubic[i].M[2], cubic[i].M[6], cubic[i].M[10]);
+
+        int j=(i%N), k=(i%(N*N))/N, l=(i/(N*N));
+
+        if(j==0) { // -X
+            // yellow plastic
+            //printf("%f,%f,%f\n", cubic[i].M[0], cubic[i].M[4], cubic[i].M[8]);
+            //printf("%f,%f,%f\n", cubic[i].M[1], cubic[i].M[5], cubic[i].M[9]);
+            //printf("%f,%f,%f\n", cubic[i].M[2], cubic[i].M[6], cubic[i].M[10]);
+            printf("%f,%f,%f\n", cubic[i].M[12], cubic[i].M[13], cubic[i].M[14]);
+            printf("\n");
+        }
+        if(j==N-1) { //  X
+            // green plastic
+            //printf("%f,%f,%f\n", cubic[i].M[12], cubic[i].M[13], cubic[i].M[14]);
+        }
+        if(k==0) { // -Y
+            // orange plastic
+            //printf("%f,%f,%f\n", cubic[i].M[12], cubic[i].M[13], cubic[i].M[14]);
+        }
+        if(k==N-1) { //  Y 
+            // red plastic
+            //printf("%f,%f,%f\n", cubic[i].M[12], cubic[i].M[13], cubic[i].M[14]);
+        }
+        if(l==0) { // -Z
+            // blue plastic
+            //printf("%f,%f,%f\n", cubic[i].M[12], cubic[i].M[13], cubic[i].M[14]);
+        }
+        if(l==N-1) { // Z
+            // white plastic
+            //printf("%f,%f,%f\n", cubic[i].M[12], cubic[i].M[13], cubic[i].M[14]);
+        }
+    }
 }
 
 /*****************************************
@@ -403,7 +443,6 @@ void MultMatrix(Matrix M, Matrix A, Matrix K)   /* M = AK */
 
 void draw_cube(int i)
 {
-    extern int N; // Cubic-Size;
     int N1 = N-1;
     int j = (i%N), k = (i%(N*N))/N, l = (i/(N*N));
     if (j==0 || j-N1==0 || k==0 || k-N1==0 || l==0 || l-N1==0) {
@@ -417,14 +456,12 @@ void draw_cube(int i)
 
 void drawCubic(void)
 {
-    extern int N; // Cubic-Size;
     int i = N*N*N;
     while (--i >= 0) draw_cube(i);   
 }
 
 void rotSlices(Action *a, int k)
 {
-    extern int N; // Cubic-Size;
     static Vector Ax_3[7] = {{ 0, 0,-1}, { 0,-1, 0}, {-1, 0, 0}, { 0, 0, 0},
 			     { 1, 0, 0}, { 0, 1, 0}, { 0, 0, 1}};
     static Vector *Ax = Ax_3 + 3;
@@ -471,8 +508,6 @@ void rotSlices(Action *a, int k)
 
 void rotRandam(void)
 {
-    extern int N; // Cubic-Size;
-    extern Action *asp, act[STACKSIZE];
     static GLubyte mask[20] = { 1, 2,  4, 3, 6,  8, 12, 14,  16, 24, 28,
 				32, 48,  7,  64, 96, 56,  128, 192, 112};
     static GLbyte  axis[6]  = {1, -1, 2, -2, 3, -3};
@@ -807,6 +842,7 @@ void makeAction(int c)
     case 'd':  eye->dist /=.9; break;
     case 'a':  zspin = !zspin; zangle = 0; break;
     case 'c':  zspin = !zspin; zangle = 0; break;
+    case 'p':  printCube(); break;
     case '*':  dangle *= root2; return;
     case ':':  dangle *= root2; return;
     case '/':  dangle /= root2; return;
@@ -881,7 +917,6 @@ void makeMenu(void)
         glutAddMenuEntry("Move away",        'd');
         glutAddSubMenu("Cubic Size",   cube_size);
         glutAddSubMenu("Rotation Step", rot_step);
-        glutAddMenuEntry("Save Image (cubic.bmp)", 'M');
         glutAddMenuEntry("Quit",             'q');
     }
     glutAttachMenu(GLUT_RIGHT_BUTTON);
