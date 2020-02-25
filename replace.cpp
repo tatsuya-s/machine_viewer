@@ -54,7 +54,6 @@ void replace_solution(std::string& str) {
 
 int main() {
     std::string str = "U2 Fw D' Fw2 Uw L R2 Uw Rw' Uw L Fw2 F2 Rw2 B L' F B' U F Lw2 U B' L2 Lw2 F U2 Fw2 Lw2 U2 Fw2 U2 F L D2 B' L' F' B' U' F D2 R2 U' L2 U L2 D' F2 D F2";
-    std::cout << str << std::endl;
     str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
     replace_solution(str);
     std::cout << str << std::endl;

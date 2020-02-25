@@ -28,7 +28,7 @@ typedef struct {
  ----------------------------------------*/
 int N = 4; // Cubic-Size
 
-#define MAXSIZE 8
+#define MAXSIZE 4
 Cubic cubic[ MAXSIZE * MAXSIZE * MAXSIZE ];
 
 #define STACKSIZE 10000
@@ -57,7 +57,6 @@ char *DataFile = NULL;
 /*****************************************
  * setup Cubic
  ----------------------------------------*/
-
 
 void drawRawCube(int N)
 {
@@ -432,7 +431,7 @@ void rotSlices(Action *a, int k)
         { 0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /* +z */
     };
     static Matrix *R90 = R90_3 + 3;
-    GLubyte slice[8*8*8];
+    GLubyte slice[4*4*4];
     GLfloat angle;
     int i;
 
@@ -463,7 +462,6 @@ void rotSlices(Action *a, int k)
             MultMatrix(cubic[i].M, R90[sign*a->axis], cubic[i].M);
         }
     }
-    glutPostRedisplay();
 }
 
 void rotRandam(void)
@@ -624,9 +622,7 @@ void idle(void)
         }
     }
 
-    if (zspin) {
-        glutPostRedisplay();
-    }
+    glutPostRedisplay();
 }
 
 void onTimer(int value)
@@ -690,14 +686,15 @@ void makeAction(int c)
     default:   return;
     }
     selecting=0;
-    glutPostRedisplay();
 }
 
 void key(unsigned char c, int x, int y) {
     makeAction((int)c);
 }
 
-void reshape(int width, int height) { glViewport(0, 0, width, height); }
+void reshape(int width, int height) { 
+    glViewport(0, 0, width, height);
+}
 
 /*****************************************
  * main
@@ -743,7 +740,7 @@ int main(int argc, char *argv[])
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DEPTH | GLUT_DOUBLE);
     glutInitWindowPosition(0, 0);
-    glutInitWindowSize(640, 500);
+    glutInitWindowSize(1000, 1000);
     glutCreateWindow(argv[0]);
     glClearColor(0.6,0.6,0.6,1.0);
 
