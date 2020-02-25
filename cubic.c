@@ -1,12 +1,3 @@
-/*
- * cubic.c: simulate Rubik's cube
- *         ("Rubik's cube" is trade mark of Tsukuda Original)
- *
- * 1999.3, tsakurai@rimath.saitama-u.ac.jp
- * 1999.7, add mouse-action
- * 2006.5, enable revenge, professor, etc 
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

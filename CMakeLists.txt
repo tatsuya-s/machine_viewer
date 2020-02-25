@@ -13,3 +13,5 @@ include_directories(${OPENGL_INCLUDE_DIR} ${GLUT_INCLUDE_DIRS})
 
 add_executable(cubic cubic.c) 
 target_link_libraries(cubic ${OPENGL_LIBRARY} ${GLUT_LIBRARY})
+
+add_executable(replace replace.cpp) 
