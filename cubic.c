@@ -28,7 +28,7 @@ typedef struct {
  ----------------------------------------*/
 int N = 4; // Cubic-Size
 
-#define MAXSIZE 4
+#define MAXSIZE 8
 Cubic cubic[ MAXSIZE * MAXSIZE * MAXSIZE ];
 
 #define STACKSIZE 10000
@@ -234,7 +234,7 @@ void drawRawCube(int N)
 void putStickers(int i, int N)
 {
     GLfloat EE[9] = {0, 0, 0.460, 0.425, 0.415, 0.405, 0.400, 0.395, 0.390};
-    GLfloat dd = (N<4)? 0.505 : 0.510;
+    GLfloat dd = (N<4) ? 0.505 : 0.510;
     GLfloat ee = EE[N];
     GLfloat ff = ee - ((N==2)?.02:.04);
     int j=(i%N), k=(i%(N*N))/N, l=(i/(N*N));
@@ -370,8 +370,7 @@ void putStickers(int i, int N)
 void initCubic(void)
 {
     Matrix E = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
-    int i;
-    for (i = 0; i < N*N*N; i++) {
+    for (int i = 0; i < N*N*N; i++) {
         memcpy(cubic[i].M, E, sizeof(Matrix)); 
         cubic[i].M[12] = (i%N)       - .5*(N-1);
         cubic[i].M[13] = (i%(N*N))/N - .5*(N-1);

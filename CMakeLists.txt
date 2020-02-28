@@ -5,11 +5,14 @@ set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-error=deprecated-declarations -Wno-de
 
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 include_directories(
+  include
   glm 
   ${OPENGL_INCLUDE_DIR} 
   ${GLUT_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
 
 add_library(
@@ -30,23 +33,11 @@ target_link_libraries(
 )
 
 add_executable(
-  cubic 
-    cubic.c
-) 
+  cube 
+    src/cube.cpp) 
 target_link_libraries(
-  cubic 
-    ${OPENGL_LIBRARY} 
-    ${GLUT_LIBRARY}
-)
-
-add_executable(
-  glutobj 
-    glutobj.c) 
-target_link_libraries(
-  glutobj 
+  cube 
     libglm
     ${OPENGL_LIBRARY} 
     ${GLUT_LIBRARY}
 )
-
-add_executable(replace replace.cpp) 

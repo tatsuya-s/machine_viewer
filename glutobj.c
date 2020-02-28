@@ -1,6 +1,3 @@
-# ifdef _WIN32
-#   include <windows.h>
-# endif
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
 #include <GLUT/glut.h>
@@ -39,7 +36,6 @@ double _dragPosZ = 0.0;
 
 double _matrix[16];
 double _matrixI[16];
-double vlen(double x, double y, double z);
 void pos(double *px, double *py, double *pz, const int x, const int y, const int *viewport);
 void getMatrix();
 void invertMatrix(const GLdouble * m, GLdouble * out);
@@ -53,20 +49,13 @@ GLMmodel *cube_model = NULL;
 
 int ww, wh;
 int show_axis = 1;
-int show_help = 0;
-int benchmark = 0;
-float auto_rotate = 0;
+int auto_rotate = 0;
 int xrotate = 0;
 int yrotate = 1;
 int zrotate = 0;
 
 int lighting = 1;
 
-void *Help_Font = GLUT_BITMAP_8_BY_13;
-int linestart = 10;
-int linespace = 20;
-
-/* Lighting Variables */
 GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
 GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
 GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -85,8 +74,6 @@ void Display(void);
 void AutoSpin(void);
 void DrawModel(GLMmodel *pmodel);
 void DrawAxis(float scale);
-void HelpDisplay(GLint ww, GLint wh);
-void HelpRenderBitmapString(float x, float y, void *font, char *string);
 
 int main(int argc, char **argv)
 {
@@ -97,10 +84,6 @@ int main(int argc, char **argv)
             }
         }
     } 
-    else {
-        printf("Usage: %s [-f] <obj filename>\n", argv[0]);
-        exit(0);
-    }
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -114,7 +97,7 @@ int main(int argc, char **argv)
     glutDisplayFunc(Display);
     glutKeyboardFunc(Keyboard);
     getMatrix();
-    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearColor(0.05f, 0.1f, 0.15f, 1.0f);
     glClearAccum(0.0, 0.0, 0.0, 0.0);
     glutReshapeFunc(Reshape);
     glutMouseFunc(Mouse);
@@ -143,8 +126,6 @@ int main(int argc, char **argv)
     bc_l_model = glmReadOBJ("../obj/bc_l_body.obj");
     bc_r_model = glmReadOBJ("../obj/bc_r_body.obj");
     cube_model = glmReadOBJ("../obj/cube_625.obj");
-    //glmUnitize(pmodel);
-    //glmVertexNormals(pmodel, 90.0, GL_TRUE);
 
     glutMainLoop();
 
@@ -233,7 +214,7 @@ void Motion(int x, int y)
         ax = dy;
         ay = dx;
         az = 0.0;
-        angle = vlen(ax, ay, az) / (double) (viewport[2] + 1) * 180.0;
+        angle = sqrt(ax * ax + ay * ay + az * az) / (double) (viewport[2] + 1) * 180.0;
 
         bx = _matrixI[0] * ax + _matrixI[4] * ay + _matrixI[8] * az;
         by = _matrixI[1] * ax + _matrixI[5] * ay + _matrixI[9] * az;
@@ -280,11 +261,6 @@ void AutoSpin(void)
 void Keyboard(unsigned char key, int x, int y)
 {
     switch (key) {
-    case 'h':
-    case 'H':{
-        show_help = !show_help;
-        break;
-    }
     case 'r':
     case 'R':{
         for (int i = 0; i < 16; i++) {
@@ -307,8 +283,8 @@ void Keyboard(unsigned char key, int x, int y)
     case 'b':
     case 'B':
     {
-        benchmark = !benchmark;
-        if (benchmark) {
+        auto_rotate = !auto_rotate;
+        if (auto_rotate) {
             glutIdleFunc(AutoSpin);
         }
         else {
@@ -316,25 +292,6 @@ void Keyboard(unsigned char key, int x, int y)
         }
         break;
     }
-    case 'x':
-    case 'X':
-    {
-        xrotate = !xrotate;
-        break;
-    }
-    case 'y':
-    case 'Y':
-    {
-        yrotate = !yrotate;
-        break;
-    }
-    case 'z':
-    case 'Z':
-    {
-        zrotate = !zrotate;
-        break;
-    }
-
     case 'l':
     case 'L':
         lighting = !lighting;
@@ -357,11 +314,6 @@ void Keyboard(unsigned char key, int x, int y)
     }
     }
     glutPostRedisplay();
-}
-
-double vlen(double x, double y, double z)
-{
-    return sqrt(x * x + y * y + z * z);
 }
 
 void pos(double *px, double *py, double *pz, const int x, const int y, const int *viewport)
@@ -455,6 +407,7 @@ void DrawAxis(float scale)
     glPushMatrix();
     glDisable(GL_LIGHTING);
     glScalef(scale, scale, scale);
+    glLineWidth(3.0);
 
     glBegin(GL_LINES);
 
@@ -479,64 +432,6 @@ void DrawAxis(float scale)
     }
     glColor3f(1.0, 1.0, 1.0);
     glPopMatrix();
-}
-
-void HelpDisplay(GLint ww, GLint wh)
-{
-    glDisable(GL_LIGHTING);
-    glColor3f(1.0f, 1.0f, 1.0f);
-
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    gluOrtho2D(0, ww, 0, wh);
-    glScalef(1, -1, 1);
-    glTranslatef(0, -wh, 0);
-    glMatrixMode(GL_MODELVIEW);
-
-    glPushMatrix();
-    glLoadIdentity();
-    linestart = 10;
-
-    HelpRenderBitmapString(30, linestart +=
-               linespace, Help_Font, "Help Menu");
-    HelpRenderBitmapString(30, linestart +=
-               linespace, Help_Font, "---------");
-    HelpRenderBitmapString(30, linestart +=
-               linespace, Help_Font,
-               "H/h = Toggle Help Menu");
-    if (!full_screen)
-    HelpRenderBitmapString(30, linestart +=
-                   linespace, Help_Font,
-                   "TAB = Activate Full Screen");
-    HelpRenderBitmapString(30, linestart +=
-               linespace, Help_Font,
-               "Esc = Exits Program");
-    HelpRenderBitmapString(30, linestart +=
-               linespace, Help_Font,
-               "R/r = Reset Position");
-    HelpRenderBitmapString(30, linestart +=
-               linespace, Help_Font,
-               "B/b = Toggle Auto Rotate");
-
-    glPopMatrix();
-
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-
-    if (lighting) {
-        glEnable(GL_LIGHTING);
-    }
-}
-
-void HelpRenderBitmapString(float x, float y, void *font, char *string)
-{
-    char *c;
-    glRasterPos2f(x, y);
-    for (c = string; *c != '\0'; c++) {
-        glutBitmapCharacter(font, *c);
-    }
 }
 
 void Display(void)
@@ -567,10 +462,6 @@ void Display(void)
     DrawModel(bc_r_model);
     DrawModel(cube_model);
     glPopMatrix();
-
-    if (show_help) {
-        HelpDisplay(ww, wh);
-    }
 
     glutSwapBuffers();
 }
