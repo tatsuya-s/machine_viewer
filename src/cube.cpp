@@ -2,7 +2,6 @@
 
 int show_axis     = true;
 int auto_rotate   = false;
-int lighting      = true;
 int full_screen   = false;
 
 double left       = 0.0;
@@ -35,29 +34,35 @@ const GLfloat mat_diffuse[]    = { 0.8, 0.8, 0.8, 1.0 };
 const GLfloat mat_specular[]   = { 1.0, 1.0, 1.0, 1.0 };
 const GLfloat high_shininess[] = { 100.0 };
 
-typedef GLfloat Matrix[16];
-
-typedef struct {
-    Matrix M;
-} Cubic;
-
-typedef struct {
-    GLubyte mask; // 8-bit mask: selected slices
-    GLbyte  axis; // 0, +-1(x), +-2(y), +-3(z): rotation axis
-} Action;
-
-typedef struct {
-    GLfloat x, y, z;
-} Vector;
-
 #define MAXSIZE 8
 Cubic cubic[ MAXSIZE * MAXSIZE * MAXSIZE ];
+Action a;
+int selecting = 0;
+GLfloat dangle = 90.0/64;
 
-#define STACKSIZE 10000
-Action  act[ STACKSIZE ], *asp = act;
+const Vector Ax[7] = {
+    { 0, 0,-1}, 
+    { 0,-1, 0}, 
+    {-1, 0, 0}, 
+    { 0, 0, 0},
+    { 1, 0, 0}, 
+    { 0, 1, 0}, 
+    { 0, 0, 1}
+};
+const Matrix R90[7] = {
+    { 0,-1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /* -z */
+    { 0, 0, 1, 0,  0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 0, 1},   /* -y */
+    { 1, 0, 0, 0,  0, 0,-1, 0,  0, 1, 0, 0,  0, 0, 0, 1},   /* -x */
+    { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /*  0 */
+    { 1, 0, 0, 0,  0, 0, 1, 0,  0,-1, 0, 0,  0, 0, 0, 1},   /* +x */
+    { 0, 0,-1, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1},   /* +y */
+    { 0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /* +z */
+};
 
 int main(int argc, char **argv)
 {
+    freopen("/dev/null", "w", stderr);
+
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
@@ -87,10 +92,9 @@ int main(int argc, char **argv)
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
 
-    if (lighting) {
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
-    }
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_NORMALIZE);
@@ -111,6 +115,7 @@ int main(int argc, char **argv)
     files.push_back("../obj/ma_t_masu.obj");
     files.push_back("../obj/ma_b_body.obj");
     files.push_back("../obj/ma_b_masu.obj");
+
     for (const auto& file : files) {
         GLMmodel* model = glmReadOBJ(file.c_str());
         models.push_back(std::unique_ptr<GLMmodel>(model));
@@ -266,10 +271,6 @@ void keyboard(unsigned char key, int x, int y)
         }
         break;
     }
-    case 'l':
-    case 'L':
-        lighting = !lighting;
-        break;
     case 9:{
         if (!full_screen) {
             glutFullScreen();
@@ -283,6 +284,20 @@ void keyboard(unsigned char key, int x, int y)
         std::exit(EXIT_SUCCESS);
         break;
     }
+    case '1':  if(selecting++) a.mask|=1<<0; else a.mask=1<<0; return;
+    case '2':  if(selecting++) a.mask|=1<<1; else a.mask=1<<1; return;
+    case '3':  if(selecting++) a.mask|=1<<2; else a.mask=1<<2; return;
+    case '4':  if(selecting++) a.mask|=1<<3; else a.mask=1<<3; return;
+    case '5':  if(selecting++) a.mask|=1<<4; else a.mask=1<<4; return;
+    case '6':  if(selecting++) a.mask|=1<<5; else a.mask=1<<5; return;
+    case '7':  if(selecting++) a.mask|=1<<6; else a.mask=1<<6; return;
+    case '8':  if(selecting++) a.mask|=1<<7; else a.mask=1<<7; return;
+    case 'j':  a.axis= 1; rotSlices(a, 4); break;
+    case 'k':  a.axis= 2; rotSlices(a, 4); break;
+    case 'l':  a.axis= 3; rotSlices(a, 4); break;
+    case 'u':  a.axis=-1; rotSlices(a, 4); break;
+    case 'i':  a.axis=-2; rotSlices(a, 4); break;
+    case 'o':  a.axis=-3; rotSlices(a, 4); break;
     default:{
         break;
     }
@@ -292,14 +307,6 @@ void keyboard(unsigned char key, int x, int y)
 
 void display(void)
 {
-    if (lighting) {
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
-    } else {
-        glDisable(GL_LIGHTING);
-        glDisable(GL_LIGHT0);
-    }
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPushMatrix();
 
@@ -308,7 +315,7 @@ void display(void)
     glMultMatrixd(modelview_matrix.data());
 
     if (show_axis) {
-        drawAxis(0.065); // 65mm
+        drawAxis(0.055); // 60mm
     }
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -336,7 +343,7 @@ void drawAxis(float scale)
     glPushMatrix();
     glDisable(GL_LIGHTING);
     glScalef(scale, scale, scale);
-    glLineWidth(3.0);
+    glLineWidth(5.0);
 
     glBegin(GL_LINES);
 
@@ -356,9 +363,7 @@ void drawAxis(float scale)
     glVertex3f(0.0, 0.0, 0.0);
     glVertex3f(0.0, 0.0, 1.0); // Z axis
     glEnd();
-    if (lighting) {
-        glEnable(GL_LIGHTING);
-    }
+    glEnable(GL_LIGHTING);
     glColor3f(1.0, 1.0, 1.0);
     glPopMatrix();
 }
@@ -402,21 +407,23 @@ void initCubic(int N)
     Matrix E = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
     for (int i = 0; i < N*N*N; i++) {
         memcpy(cubic[i].M, E, sizeof(Matrix)); 
-        cubic[i].M[12] = (i%N)       - .5*(N-1);
-        cubic[i].M[13] = (i%(N*N))/N - .5*(N-1);
-        cubic[i].M[14] = (i/(N*N))   - .5*(N-1);
+        cubic[i].M[12] = (i%N)       - 0.5*(N-1);
+        cubic[i].M[13] = (i%(N*N))/N - 0.5*(N-1);
+        cubic[i].M[14] = (i/(N*N))   - 0.5*(N-1);
     }
-    asp = act;
 }
 
 void drawCubic(int N)
 {
-    int i = N*N*N;
     glPushMatrix();
+    glDisable(GL_LIGHTING);
     glScalef(0.0156, 0.0156, 0.0156); // 4 x 0.015625 = 0.0625
-    while (--i >= 0) {
+
+    for (int i = 0; i < N*N*N; i++) {
         drawCube(N, i);
     }
+
+    glEnable(GL_LIGHTING);
     glPopMatrix();
 }
 
@@ -748,5 +755,53 @@ void putStickers(int i, int N)
         glVertex3f(-ee,  ff,  dd);
         glVertex3f(-ee, -ff,  dd);
         glEnd();
+    }
+}
+
+void rotSlices(Action a, int N)
+{
+    GLubyte slice[N*N*N];
+    int index = a.axis + 3;
+
+    if (a.mask == 0) {
+        return;
+    }
+    for (int i = 0; i < N*N*N; i++) {
+        slice[i] = (GLubyte)(cubic[i].M[11+abs(a.axis)] + 0.5*(N-1));
+    }
+    for (GLfloat angle = dangle; angle < 90; angle += dangle) {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glPushMatrix();
+        glDisable(GL_LIGHTING);
+        glScalef(0.0156, 0.0156, 0.0156); // 4 x 0.015625 = 0.0625
+
+        for (int i = 0; i < N*N*N; i++) {
+            glPushMatrix();
+            if (a.mask & (1 << slice[i])) {
+                glRotatef(angle, Ax[index].x, Ax[index].y, Ax[index].z);
+            }
+            drawCube(N, i);
+            glPopMatrix();
+        }
+
+        glEnable(GL_LIGHTING);
+        glPopMatrix();
+        glutSwapBuffers();
+    }
+    for (int i = 0; i < N*N*N; i++) {
+        if (a.mask & (1 << slice[i])) {
+            MultMatrix(cubic[i].M, R90[index], cubic[i].M);
+        }
+    }
+}
+
+void MultMatrix(Matrix M, const Matrix A, const Matrix K)   /* M = AK */
+{
+    Matrix n;
+    memcpy(n, K, sizeof(Matrix));
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 4; j++) {
+            M[i+4*j] = A[i+4*0]*n[0+4*j] + A[i+4*1]*n[1+4*j] + A[i+4*2]*n[2+4*j] + A[i+4*3]*n[3+4*j];
+        }
     }
 }
