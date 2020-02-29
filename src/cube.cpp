@@ -34,29 +34,33 @@ const GLfloat mat_diffuse[]    = { 0.8, 0.8, 0.8, 1.0 };
 const GLfloat mat_specular[]   = { 1.0, 1.0, 1.0, 1.0 };
 const GLfloat high_shininess[] = { 100.0 };
 
-#define MAXSIZE 8
-Cubic cubic[ MAXSIZE * MAXSIZE * MAXSIZE ];
-Action a;
-int selecting = 0;
-GLfloat dangle = 90.0/64;
+const int N = 4;
+std::array<Eigen::Matrix4d, N*N*N> cubic, prev_cubic;
+std::array<GLubyte, N*N*N> slice;
+Action tmp_act, det_act;
+GLfloat dangle = 90.0 / 10;
+GLfloat slice_angle = 0;
+int scramble = 0;
+bool rotating = false;
 
-const Vector Ax[7] = {
-    { 0, 0,-1}, 
-    { 0,-1, 0}, 
-    {-1, 0, 0}, 
-    { 0, 0, 0},
-    { 1, 0, 0}, 
-    { 0, 1, 0}, 
-    { 0, 0, 1}
+const std::array<Eigen::Vector3d, 7> axes = {
+    Eigen::Vector3d( 0.0, 0.0,-1.0), 
+    Eigen::Vector3d( 0.0,-1.0, 0.0), 
+    Eigen::Vector3d(-1.0, 0.0, 0.0), 
+    Eigen::Vector3d( 0.0, 0.0, 0.0),
+    Eigen::Vector3d( 1.0, 0.0, 0.0), 
+    Eigen::Vector3d( 0.0, 1.0, 0.0), 
+    Eigen::Vector3d( 0.0, 0.0, 1.0)
 };
-const Matrix R90[7] = {
-    { 0,-1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /* -z */
-    { 0, 0, 1, 0,  0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 0, 1},   /* -y */
-    { 1, 0, 0, 0,  0, 0,-1, 0,  0, 1, 0, 0,  0, 0, 0, 1},   /* -x */
-    { 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /*  0 */
-    { 1, 0, 0, 0,  0, 0, 1, 0,  0,-1, 0, 0,  0, 0, 0, 1},   /* +x */
-    { 0, 0,-1, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1},   /* +y */
-    { 0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1},   /* +z */
+
+const std::array<Eigen::Matrix4d, 7> trans = {
+    (Eigen::Matrix4d() << 0,-1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1).finished(),   /* -z */
+    (Eigen::Matrix4d() << 0, 0, 1, 0,  0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 0, 1).finished(),   /* -y */
+    (Eigen::Matrix4d() << 1, 0, 0, 0,  0, 0,-1, 0,  0, 1, 0, 0,  0, 0, 0, 1).finished(),   /* -x */
+    (Eigen::Matrix4d() << 1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1).finished(),   /*  0 */
+    (Eigen::Matrix4d() << 1, 0, 0, 0,  0, 0, 1, 0,  0,-1, 0, 0,  0, 0, 0, 1).finished(),   /* +x */
+    (Eigen::Matrix4d() << 0, 0,-1, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1).finished(),   /* +y */
+    (Eigen::Matrix4d() << 0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1).finished(),   /* +z */
 };
 
 int main(int argc, char **argv)
@@ -66,7 +70,7 @@ int main(int argc, char **argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
-    glutInitWindowSize(1000, 1000);
+    glutInitWindowSize(800, 800);
     glutCreateWindow("Machine Viewer");
     if (full_screen) {
         glutFullScreen();
@@ -74,13 +78,13 @@ int main(int argc, char **argv)
 
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
+    glutTimerFunc(60, onTimer, 60);
     getMatrix();
     glClearColor(0.05f, 0.1f, 0.15f, 1.0f);
     glClearAccum(0.0, 0.0, 0.0, 0.0);
     glutReshapeFunc(reshape);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
-    glutIdleFunc(nullptr);
 
     glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
@@ -121,7 +125,7 @@ int main(int argc, char **argv)
         models.push_back(std::unique_ptr<GLMmodel>(model));
     }
 
-    initCubic(4);
+    initCubic();
 
     glutMainLoop();
 
@@ -151,28 +155,31 @@ void mouse(int button, int state, int x, int y)
     mouse_x = x;
     mouse_y = y;
 
-    if (state == GLUT_UP)
+    if (state == GLUT_UP) {
         switch (button) {
-        case GLUT_LEFT_BUTTON:
-            mouse_left = false;
-            break;
-        case GLUT_MIDDLE_BUTTON:
-            mouse_middle = false;
-            break;
-        case GLUT_RIGHT_BUTTON:
-            mouse_right = false;
-            break;
-    } else
-    switch (button) {
-        case GLUT_LEFT_BUTTON:
-            mouse_left = true;
-            break;
-        case GLUT_MIDDLE_BUTTON:
-            mouse_middle = true;
-            break;
-        case GLUT_RIGHT_BUTTON:
-            mouse_right = true;
-            break;
+            case GLUT_LEFT_BUTTON:
+                mouse_left = false;
+                break;
+            case GLUT_MIDDLE_BUTTON:
+                mouse_middle = false;
+                break;
+            case GLUT_RIGHT_BUTTON:
+                mouse_right = false;
+                break;
+        }
+    }
+    else {
+        switch (button) {
+            case GLUT_LEFT_BUTTON:
+                mouse_left = true;
+                break;
+            case GLUT_MIDDLE_BUTTON:
+                mouse_middle = true;
+                break;
+            case GLUT_RIGHT_BUTTON:
+                mouse_right = true;
+                break;
+        }
     }
 
     glGetIntegerv(GL_VIEWPORT, viewport.data());
@@ -246,66 +253,111 @@ void motion(int x, int y)
 void keyboard(unsigned char key, int x, int y)
 {
     switch (key) {
-    case 'r':
-    case 'R':{
-        modelview_matrix = Eigen::MatrixXd::Identity(4, 4);
-        glLoadIdentity();
-        glMultMatrixd(modelview_matrix.data());
-        getMatrix();
-        break;
-    }
-    case 'a':
-    case 'A':{
-        show_axis = !show_axis;
-        break;
-    }
-    case 'b':
-    case 'B':
-    {
-        auto_rotate = !auto_rotate;
-        if (auto_rotate) {
-            glutIdleFunc(autoSpin);
+        case 'r':
+        case 'R':{
+            modelview_matrix = Eigen::MatrixXd::Identity(4, 4);
+            glLoadIdentity();
+            glMultMatrixd(modelview_matrix.data());
+            getMatrix();
+            break;
         }
-        else {
-            glutIdleFunc(nullptr);
+        case 'a':
+        case 'A':{
+            show_axis = !show_axis;
+            break;
         }
-        break;
-    }
-    case 9:{
-        if (!full_screen) {
-            glutFullScreen();
-            full_screen = 1;
+        case 'b':
+        case 'B':{
+            auto_rotate = !auto_rotate;
+            break;
         }
-        break;
-    }
-    case 'q':
-    case 'Q':
-    case 27:{
-        std::exit(EXIT_SUCCESS);
-        break;
-    }
-    case '1':  if(selecting++) a.mask|=1<<0; else a.mask=1<<0; return;
-    case '2':  if(selecting++) a.mask|=1<<1; else a.mask=1<<1; return;
-    case '3':  if(selecting++) a.mask|=1<<2; else a.mask=1<<2; return;
-    case '4':  if(selecting++) a.mask|=1<<3; else a.mask=1<<3; return;
-    case '5':  if(selecting++) a.mask|=1<<4; else a.mask=1<<4; return;
-    case '6':  if(selecting++) a.mask|=1<<5; else a.mask=1<<5; return;
-    case '7':  if(selecting++) a.mask|=1<<6; else a.mask=1<<6; return;
-    case '8':  if(selecting++) a.mask|=1<<7; else a.mask=1<<7; return;
-    case 'j':  a.axis= 1; rotSlices(a, 4); break;
-    case 'k':  a.axis= 2; rotSlices(a, 4); break;
-    case 'l':  a.axis= 3; rotSlices(a, 4); break;
-    case 'u':  a.axis=-1; rotSlices(a, 4); break;
-    case 'i':  a.axis=-2; rotSlices(a, 4); break;
-    case 'o':  a.axis=-3; rotSlices(a, 4); break;
-    default:{
-        break;
-    }
+        case 9:{
+            if (!full_screen) {
+                glutFullScreen();
+                full_screen = 1;
+            }
+            break;
+        }
+        case 'q':
+        case 'Q':
+        case 27:{
+            std::exit(EXIT_SUCCESS);
+            break;
+        }
+        case '1':{
+            tmp_act.mask |= 1<<0;
+            break;
+        }
+        case '2':{
+            tmp_act.mask |= 1<<1;
+            break;
+        }
+        case '3':{
+            tmp_act.mask |= 1<<2;
+            break;
+        }
+        case '4':{
+            tmp_act.mask |= 1<<3;
+            break;
+        }
+        case '5':{
+            tmp_act.mask |= 1<<4;
+            break;
+        }
+        case '6':{
+            tmp_act.mask |= 1<<5;
+            break;
+        }
+        case '7':{
+            tmp_act.mask |= 1<<6;
+            break;
+        }
+        case '8':{
+            tmp_act.mask |= 1<<7;
+            break;
+        }
+        case 'j':{
+            tmp_act.axis = 1;
+            rotSlices();
+            break;
+        }
+        case 'k':{
+            tmp_act.axis = 2;
+            rotSlices();
+            break;
+        }
+        case 'l':{
+            tmp_act.axis = 3;
+            rotSlices();
+            break;
+        }
+        case 'u':{
+            tmp_act.axis = -1;
+            rotSlices();
+            break;
+        }
+        case 'i':{
+            tmp_act.axis = -2;
+            rotSlices();
+            break;
+        }
+        case 'o':{
+            tmp_act.axis = -3;
+            rotSlices();
+            break;
+        }
+        case 's':{
+            scramble = 30;
+            break;
+        }
+        default:{
+            break;
+        }
     }
     glutPostRedisplay();
 }
 
-void display(void)
+void display()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPushMatrix();
@@ -324,18 +376,25 @@ void display(void)
         drawModel(model);
     }
 
-    drawCubic(4);
+    drawCubic();
 
     glPopMatrix();
 
     glutSwapBuffers();
 }
 
-void autoSpin(void)
+void onTimer(int value)
 {
-    glRotatef(1, 0, 1, 0);
-    getMatrix();
+    if ((!rotating) & (scramble > 0)) {
+        rotRandom();
+        scramble--;
+    }
+    if (auto_rotate) {
+        glRotatef(1, 0, 1, 0);
+        getMatrix();
+    }
     glutPostRedisplay();
+    glutTimerFunc(value, onTimer, value);
 }
 
 void drawAxis(float scale)
@@ -391,58 +450,66 @@ void getMatrix()
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix.data());
 }
 
-
-
-
-
-
-
-
-
-
-
-void initCubic(int N)
+void initCubic()
 {
-    //Eigen::Matrix4d E = Eigen::MatrixXd::Identity(4, 4);
-    Matrix E = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1};
     for (int i = 0; i < N*N*N; i++) {
-        memcpy(cubic[i].M, E, sizeof(Matrix)); 
-        cubic[i].M[12] = (i%N)       - 0.5*(N-1);
-        cubic[i].M[13] = (i%(N*N))/N - 0.5*(N-1);
-        cubic[i].M[14] = (i/(N*N))   - 0.5*(N-1);
+        cubic[i] = Eigen::MatrixXd::Identity(4, 4);
+        //cubic[i].block<3,1>(0,3) = Eigen::Vector3d((i%N)-0.5*(N-1), (i%(N*N))/N-0.5*(N-1), (i/(N*N)) - 0.5*(N-1));
+        cubic[i](0,3) = (i%N)-0.5*(N-1);
+        cubic[i](1,3) = (i%(N*N))/N-0.5*(N-1);
+        cubic[i](2,3) = (i/(N*N)) - 0.5*(N-1);
     }
 }
 
-void drawCubic(int N)
+void drawCubic()
 {
     glPushMatrix();
     glDisable(GL_LIGHTING);
-    glScalef(0.0156, 0.0156, 0.0156); // 4 x 0.015625 = 0.0625
+    glScaled(0.0156, 0.0156, 0.0156); // 4 x 0.015625 = 0.0625
+
+    const Eigen::Affine3d affine = Eigen::Affine3d(Eigen::AngleAxisd(-dangle * M_PI / 180, axes[det_act.axis + 3]));
 
     for (int i = 0; i < N*N*N; i++) {
-        drawCube(N, i);
+        if (det_act.mask & (1 << slice[i])) {
+            if (slice_angle > 90) {
+                cubic[i] = trans[det_act.axis + 3] * prev_cubic[i];
+            }
+            else if (slice_angle > 0) {
+                cubic[i] = affine.matrix() * cubic[i];
+            }
+        }
+        drawCube(i);
     }
+
+    if (slice_angle > 90) {
+        det_act.clear();
+        prev_cubic = cubic;
+        slice_angle = 0;
+        rotating = false;
+    }
+
+    slice_angle = slice_angle > 0 ? slice_angle + dangle : 0;
 
     glEnable(GL_LIGHTING);
     glPopMatrix();
 }
 
-void drawCube(int N, int i)
+void drawCube(int i)
 {
     int N1 = N-1;
     int j = (i%N), k = (i%(N*N))/N, l = (i/(N*N));
     if (j==0 || j-N1==0 || k==0 || k-N1==0 || l==0 || l-N1==0) {
         glPushMatrix();
-        glMultMatrixf(cubic[i].M);
-        drawRawCube(N);
-        putStickers(i, N);
+        glMultMatrixd(cubic[i].data());
+        drawRawCube();
+        putStickers(i);
         glPopMatrix();
     }
 }
 
-void drawRawCube(int N)
+void drawRawCube()
 {
-    GLfloat AA[9] = {0, 0, 0.480, 0.470, 0.465, 0.460, 0.455, 0.450, 0.450};
+    const std::array<GLfloat, 9> AA = {0, 0, 0.480, 0.470, 0.465, 0.460, 0.455, 0.450, 0.450};
     GLfloat ll = 0.50;
     GLfloat aa = AA[N];
 
@@ -614,7 +681,7 @@ void drawRawCube(int N)
     glEnd();
 }
 
-void putStickers(int i, int N)
+void putStickers(int i)
 {
     GLfloat EE[9] = {0, 0, 0.460, 0.425, 0.415, 0.405, 0.400, 0.395, 0.390};
     GLfloat dd = (N<4) ? 0.505 : 0.510;
@@ -758,50 +825,34 @@ void putStickers(int i, int N)
     }
 }
 
-void rotSlices(Action a, int N)
+void rotSlices()
 {
-    GLubyte slice[N*N*N];
-    int index = a.axis + 3;
-
-    if (a.mask == 0) {
+    if (tmp_act.mask == 0) {
         return;
     }
     for (int i = 0; i < N*N*N; i++) {
-        slice[i] = (GLubyte)(cubic[i].M[11+abs(a.axis)] + 0.5*(N-1));
+        int axis_row = std::abs(tmp_act.axis) - 1;
+        slice[i] = static_cast<GLubyte>(cubic[i](axis_row, 3) + 0.5 * (N - 1));
     }
-    for (GLfloat angle = dangle; angle < 90; angle += dangle) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glPushMatrix();
-        glDisable(GL_LIGHTING);
-        glScalef(0.0156, 0.0156, 0.0156); // 4 x 0.015625 = 0.0625
 
-        for (int i = 0; i < N*N*N; i++) {
-            glPushMatrix();
-            if (a.mask & (1 << slice[i])) {
-                glRotatef(angle, Ax[index].x, Ax[index].y, Ax[index].z);
-            }
-            drawCube(N, i);
-            glPopMatrix();
-        }
-
-        glEnable(GL_LIGHTING);
-        glPopMatrix();
-        glutSwapBuffers();
-    }
-    for (int i = 0; i < N*N*N; i++) {
-        if (a.mask & (1 << slice[i])) {
-            MultMatrix(cubic[i].M, R90[index], cubic[i].M);
-        }
-    }
+    det_act = tmp_act;
+    tmp_act.clear();
+    prev_cubic = cubic;
+    slice_angle = dangle;
+    rotating = true;
 }
 
-void MultMatrix(Matrix M, const Matrix A, const Matrix K)   /* M = AK */
+void rotRandom()
 {
-    Matrix n;
-    memcpy(n, K, sizeof(Matrix));
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 4; j++) {
-            M[i+4*j] = A[i+4*0]*n[0+4*j] + A[i+4*1]*n[1+4*j] + A[i+4*2]*n[2+4*j] + A[i+4*3]*n[3+4*j];
-        }
+    static GLubyte rand_mask[20] = { 1, 2,  4, 3, 6,  8, 12, 14,  16, 24, 28,
+				32, 48,  7,  64, 96, 56,  128, 192, 112};
+    static GLbyte  rand_axis[6]  = {1, -1, 2, -2, 3, -3};
+    static int init = 0;
+    if (!init) {
+        srand((unsigned) time(NULL));
+        init=1;
     }
+    tmp_act.mask = rand_mask[rand()%(2+3*(4-2))];//N=4
+    tmp_act.axis = rand_axis[rand()%6];
+    rotSlices();
 }
