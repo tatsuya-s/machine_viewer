@@ -1,6 +1,5 @@
 #include "cube.hpp"
 
-int show_axis     = true;
 int auto_rotate   = false;
 int full_screen   = false;
 
@@ -25,23 +24,24 @@ Eigen::Matrix4d modelview_matrix;
 
 std::vector<std::unique_ptr<GLMmodel>> models;
 
-const GLfloat light_ambient[]  = { 0.0, 0.0, 0.0, 1.0 };
-const GLfloat light_diffuse[]  = { 1.0, 1.0, 1.0, 1.0 };
-const GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-const GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
-const GLfloat mat_ambient[]    = { 0.7, 0.7, 0.7, 1.0 };
-const GLfloat mat_diffuse[]    = { 0.8, 0.8, 0.8, 1.0 };
-const GLfloat mat_specular[]   = { 1.0, 1.0, 1.0, 1.0 };
-const GLfloat high_shininess[] = { 100.0 };
+const std::array<float, 4> light_ambient  = { 0.0, 0.0, 0.0, 1.0 };
+const std::array<float, 4> light_diffuse  = { 1.0, 1.0, 1.0, 1.0 };
+const std::array<float, 4> light_specular = { 1.0, 1.0, 1.0, 1.0 };
+const std::array<float, 4> light_position = { 1.0, 1.0, 1.0, 0.0 };
+const std::array<float, 4> mat_ambient    = { 0.7, 0.7, 0.7, 1.0 };
+const std::array<float, 4> mat_diffuse    = { 0.8, 0.8, 0.8, 1.0 };
+const std::array<float, 4> mat_specular   = { 1.0, 1.0, 1.0, 1.0 };
+const std::array<float, 1> high_shininess = { 100.0 };
 
 const int N = 4;
 std::array<Eigen::Matrix4d, N*N*N> cubic, prev_cubic;
-std::array<GLubyte, N*N*N> slice;
+std::array<uint8_t, N*N*N> slice;
 Action tmp_act, det_act;
-GLfloat dangle = 90.0 / 10;
-GLfloat slice_angle = 0;
+double dangle = 90.0 / 10;
+double slice_angle = 0;
 int scramble = 0;
 bool rotating = false;
+bool skip_anim = false;
 
 const std::array<Eigen::Vector3d, 7> axes = {
     Eigen::Vector3d( 0.0, 0.0,-1.0), 
@@ -63,10 +63,112 @@ const std::array<Eigen::Matrix4d, 7> trans = {
     (Eigen::Matrix4d() << 0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1).finished(),   /* +z */
 };
 
-int main(int argc, char **argv)
-{
-    freopen("/dev/null", "w", stderr);
+const std::map<std::string, std::string> dict = {
+    {"R'", "1j"}, 
+    {"D'", "1k"}, 
+    {"F'", "1l"}, 
+    {"L'", "4u"}, 
+    {"U'", "4i"}, 
+    {"B'", "4o"}, 
+    {"R2'", "1j1j"}, 
+    {"D2'", "1k1k"}, 
+    {"F2'", "1l1l"}, 
+    {"L2'", "4u4u"}, 
+    {"U2'", "4i4i"}, 
+    {"B2'", "4o4o"}, 
+    {"Rw'", "12j"}, 
+    {"Dw'", "12k"}, 
+    {"Fw'", "12l"}, 
+    {"Lw'", "34u"}, 
+    {"Uw'", "34i"}, 
+    {"Bw'", "34o"}, 
+    {"Rw2'", "12j12j"}, 
+    {"Dw2'", "12k12k"}, 
+    {"Fw2'", "12l12l"}, 
+    {"Lw2'", "34u34u"}, 
+    {"Uw2'", "34i34i"}, 
+    {"Bw2'", "34o34o"}, 
+    {"Rw2", "12u12u"}, 
+    {"Dw2", "12i12i"}, 
+    {"Fw2", "12o12o"}, 
+    {"Lw2", "34j34j"}, 
+    {"Uw2", "34k34k"}, 
+    {"Bw2", "34l34l"}, 
+    {"Rw", "12u"}, 
+    {"Dw", "12i"}, 
+    {"Fw", "12o"}, 
+    {"Lw", "34j"}, 
+    {"Uw", "34k"}, 
+    {"Bw", "34l"}, 
+    {"R2", "1u1u"}, 
+    {"D2", "1i1i"}, 
+    {"F2", "1o1o"}, 
+    {"L2", "4j4j"}, 
+    {"U2", "4k4k"}, 
+    {"B2", "4l4l"}, 
+    {"R", "1u"}, 
+    {"D", "1i"}, 
+    {"F", "1o"}, 
+    {"L", "4j"}, 
+    {"U", "4k"}, 
+    {"B", "4l"}
+};
 
+const std::map<std::string, std::string> inverse_dict = {
+    {"R'", "1u"}, 
+    {"D'", "1i"}, 
+    {"F'", "1o"}, 
+    {"L'", "4j"}, 
+    {"U'", "4k"}, 
+    {"B'", "4l"}, 
+    {"R2'", "1u1u"}, 
+    {"D2'", "1i1i"}, 
+    {"F2'", "1o1o"}, 
+    {"L2'", "4j4j"}, 
+    {"U2'", "4k4k"}, 
+    {"B2'", "4l4l"}, 
+    {"Rw'", "12u"}, 
+    {"Dw'", "12i"}, 
+    {"Fw'", "12o"}, 
+    {"Lw'", "34j"}, 
+    {"Uw'", "34k"}, 
+    {"Bw'", "34l"}, 
+    {"Rw2'", "12u12u"}, 
+    {"Dw2'", "12i12i"}, 
+    {"Fw2'", "12o12o"}, 
+    {"Lw2'", "34j34j"}, 
+    {"Uw2'", "34k34k"}, 
+    {"Bw2'", "34l34l"}, 
+    {"Rw2", "12j12j"}, 
+    {"Dw2", "12k12k"}, 
+    {"Fw2", "12l12l"}, 
+    {"Lw2", "34u34u"}, 
+    {"Uw2", "34i34i"}, 
+    {"Bw2", "34o34o"}, 
+    {"Rw", "12j"}, 
+    {"Dw", "12k"}, 
+    {"Fw", "12l"}, 
+    {"Lw", "34u"}, 
+    {"Uw", "34i"}, 
+    {"Bw", "34o"}, 
+    {"R2", "1j1j"}, 
+    {"D2", "1k1k"}, 
+    {"F2", "1l1l"}, 
+    {"L2", "4u4u"}, 
+    {"U2", "4i4i"}, 
+    {"B2", "4o4o"}, 
+    {"R", "1j"}, 
+    {"D", "1k"}, 
+    {"F", "1l"}, 
+    {"L", "4u"}, 
+    {"U", "4i"}, 
+    {"B", "4o"}
+};
+
+std::string::iterator solve_motion_it;
+std::string solve_motion;
+
+int main(int argc, char **argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
@@ -86,15 +188,15 @@ int main(int argc, char **argv)
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
 
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient.data());
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse.data());
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular.data());
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position.data());
 
-    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-    glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
+    glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient.data());
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse.data());
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular.data());
+    glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess.data());
 
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -119,21 +221,44 @@ int main(int argc, char **argv)
     files.push_back("../obj/ma_t_masu.obj");
     files.push_back("../obj/ma_b_body.obj");
     files.push_back("../obj/ma_b_masu.obj");
+    files.push_back("../obj/camera.obj");
 
+    freopen("/dev/null", "w", stderr);
     for (const auto& file : files) {
         GLMmodel* model = glmReadOBJ(file.c_str());
         models.push_back(std::unique_ptr<GLMmodel>(model));
     }
 
-    initCubic();
+    std::string solution;
+    bool is_first = true;
+    if (argc > 1) {
+        for (int i = 1; i < argc; ++i) {
+            if (!is_first) {
+                solution += " ";
+            }
+            else {
+                is_first = false;
+            }
+            solution += argv[i];
+        }
+    }
+
+    std::string init_motion;
+    makeMotionsFromSolution(solution, init_motion, solve_motion);
+    solve_motion_it = solve_motion.begin();
+
+    std::cout << solution << std::endl;
+    std::cout << init_motion << std::endl;
+    std::cout << solve_motion << std::endl;
+
+    initCubic(init_motion);
 
     glutMainLoop();
 
     return 0;
 }
 
-void reshape(int w, int h)
-{
+void reshape(int w, int h) {
     glViewport(0, 0, w, h);
 
     top = 1.0;
@@ -148,8 +273,7 @@ void reshape(int w, int h)
     glMatrixMode(GL_MODELVIEW);
 }
 
-void mouse(int button, int state, int x, int y)
-{
+void mouse(int button, int state, int x, int y) {
     Eigen::Vector4i viewport;
 
     mouse_x = x;
@@ -186,8 +310,7 @@ void mouse(int button, int state, int x, int y)
     getDragPos(drag_x, drag_y, drag_z, x, y, viewport);
 }
 
-void motion(int x, int y)
-{
+void motion(int x, int y) {
     bool changed = false;
 
     const int dx = x - mouse_x;
@@ -250,24 +373,16 @@ void motion(int x, int y)
     }
 }
 
-void keyboard(unsigned char key, int x, int y)
-{
+void keyboard(unsigned char key, int x, int y) {
     switch (key) {
-        case 'r':
-        case 'R':{
+        case 'r':{
             modelview_matrix = Eigen::MatrixXd::Identity(4, 4);
             glLoadIdentity();
             glMultMatrixd(modelview_matrix.data());
             getMatrix();
             break;
         }
-        case 'a':
-        case 'A':{
-            show_axis = !show_axis;
-            break;
-        }
-        case 'b':
-        case 'B':{
+        case 'b':{
             auto_rotate = !auto_rotate;
             break;
         }
@@ -279,71 +394,8 @@ void keyboard(unsigned char key, int x, int y)
             break;
         }
         case 'q':
-        case 'Q':
         case 27:{
             std::exit(EXIT_SUCCESS);
-            break;
-        }
-        case '1':{
-            tmp_act.mask |= 1<<0;
-            break;
-        }
-        case '2':{
-            tmp_act.mask |= 1<<1;
-            break;
-        }
-        case '3':{
-            tmp_act.mask |= 1<<2;
-            break;
-        }
-        case '4':{
-            tmp_act.mask |= 1<<3;
-            break;
-        }
-        case '5':{
-            tmp_act.mask |= 1<<4;
-            break;
-        }
-        case '6':{
-            tmp_act.mask |= 1<<5;
-            break;
-        }
-        case '7':{
-            tmp_act.mask |= 1<<6;
-            break;
-        }
-        case '8':{
-            tmp_act.mask |= 1<<7;
-            break;
-        }
-        case 'j':{
-            tmp_act.axis = 1;
-            rotSlices();
-            break;
-        }
-        case 'k':{
-            tmp_act.axis = 2;
-            rotSlices();
-            break;
-        }
-        case 'l':{
-            tmp_act.axis = 3;
-            rotSlices();
-            break;
-        }
-        case 'u':{
-            tmp_act.axis = -1;
-            rotSlices();
-            break;
-        }
-        case 'i':{
-            tmp_act.axis = -2;
-            rotSlices();
-            break;
-        }
-        case 'o':{
-            tmp_act.axis = -3;
-            rotSlices();
             break;
         }
         case 's':{
@@ -351,24 +403,27 @@ void keyboard(unsigned char key, int x, int y)
             break;
         }
         default:{
+            if (makeAction(key)) {
+                rotSlices();
+            }
             break;
         }
     }
     glutPostRedisplay();
 }
 
-void display()
-{
+void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glPushMatrix();
 
     glLoadIdentity();
     glTranslatef(0, 0, -0.5);
+    glRotatef( 20, 1, 0, 0);
+    glRotatef(-20, 0, 1, 0);
+    glRotatef( -2, 0, 0, 1);
     glMultMatrixd(modelview_matrix.data());
 
-    if (show_axis) {
-        drawAxis(0.055); // 60mm
-    }
+    drawAxis(0.055); // 55mm
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -383,9 +438,14 @@ void display()
     glutSwapBuffers();
 }
 
-void onTimer(int value)
-{
-    if ((!rotating) & (scramble > 0)) {
+void onTimer(int value) {
+    if ((!rotating) & solve_motion_it != solve_motion.end()) {
+        if (makeAction(*solve_motion_it)) {
+            rotSlices();
+        }
+        solve_motion_it++;
+    }
+    else if ((!rotating) & (scramble > 0)) {
         rotRandom();
         scramble--;
     }
@@ -397,8 +457,7 @@ void onTimer(int value)
     glutTimerFunc(value, onTimer, value);
 }
 
-void drawAxis(float scale)
-{
+void drawAxis(float scale) {
     glPushMatrix();
     glDisable(GL_LIGHTING);
     glScalef(scale, scale, scale);
@@ -427,16 +486,14 @@ void drawAxis(float scale)
     glPopMatrix();
 }
 
-void drawModel(const std::unique_ptr<GLMmodel>& model)
-{
+void drawModel(const std::unique_ptr<GLMmodel>& model) {
     glPushMatrix();
     glScalef(0.001, 0.001, 0.001);
     glmDraw(model.get(), GLM_FLAT | GLM_COLOR);
     glPopMatrix();
 }
 
-void getDragPos(double& px, double& py, double& pz, const int x, const int y, const Eigen::Vector4i& viewport)
-{
+void getDragPos(double& px, double& py, double& pz, const int x, const int y, const Eigen::Vector4i& viewport) {
     px = (double) (x - viewport(0)) / (double) (viewport(2));
     py = (double) (y - viewport(1)) / (double) (viewport(3));
 
@@ -445,33 +502,44 @@ void getDragPos(double& px, double& py, double& pz, const int x, const int y, co
     pz = near;
 }
 
-void getMatrix()
-{
+void getMatrix() {
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview_matrix.data());
 }
 
-void initCubic()
-{
-    for (int i = 0; i < N*N*N; i++) {
+void initCubic(std::string& init) {
+    for (int i = 0; i < N*N*N; ++i) {
         cubic[i] = Eigen::MatrixXd::Identity(4, 4);
-        //cubic[i].block<3,1>(0,3) = Eigen::Vector3d((i%N)-0.5*(N-1), (i%(N*N))/N-0.5*(N-1), (i/(N*N)) - 0.5*(N-1));
         cubic[i](0,3) = (i%N)-0.5*(N-1);
         cubic[i](1,3) = (i%(N*N))/N-0.5*(N-1);
         cubic[i](2,3) = (i/(N*N)) - 0.5*(N-1);
+
+        for (auto& c : init) {
+            if (!makeAction(c)) {
+                continue;
+            }
+            
+            int axis_row = std::abs(tmp_act.axis) - 1;
+            slice[i] = static_cast<uint8_t>(cubic[i](axis_row, 3) + 0.5 * (N - 1));
+
+            if (tmp_act.mask & (1 << slice[i])) {
+                cubic[i] = trans[tmp_act.axis + 3] * cubic[i];
+            }
+
+            tmp_act.clear();
+        }
     }
 }
 
-void drawCubic()
-{
+void drawCubic() {
     glPushMatrix();
     glDisable(GL_LIGHTING);
     glScaled(0.0156, 0.0156, 0.0156); // 4 x 0.015625 = 0.0625
 
     const Eigen::Affine3d affine = Eigen::Affine3d(Eigen::AngleAxisd(-dangle * M_PI / 180, axes[det_act.axis + 3]));
 
-    for (int i = 0; i < N*N*N; i++) {
+    for (int i = 0; i < N*N*N; ++i) {
         if (det_act.mask & (1 << slice[i])) {
-            if (slice_angle > 90) {
+            if ((skip_anim) | (slice_angle > 90)) {
                 cubic[i] = trans[det_act.axis + 3] * prev_cubic[i];
             }
             else if (slice_angle > 0) {
@@ -481,7 +549,7 @@ void drawCubic()
         drawCube(i);
     }
 
-    if (slice_angle > 90) {
+    if (skip_anim | (slice_angle > 90)) {
         det_act.clear();
         prev_cubic = cubic;
         slice_angle = 0;
@@ -494,8 +562,7 @@ void drawCubic()
     glPopMatrix();
 }
 
-void drawCube(int i)
-{
+void drawCube(int i) {
     int N1 = N-1;
     int j = (i%N), k = (i%(N*N))/N, l = (i/(N*N));
     if (j==0 || j-N1==0 || k==0 || k-N1==0 || l==0 || l-N1==0) {
@@ -507,8 +574,7 @@ void drawCube(int i)
     }
 }
 
-void drawRawCube()
-{
+void drawRawCube() {
     const std::array<GLfloat, 9> AA = {0, 0, 0.480, 0.470, 0.465, 0.460, 0.455, 0.450, 0.450};
     GLfloat ll = 0.50;
     GLfloat aa = AA[N];
@@ -681,8 +747,7 @@ void drawRawCube()
     glEnd();
 }
 
-void putStickers(int i)
-{
+void putStickers(int i) {
     GLfloat EE[9] = {0, 0, 0.460, 0.425, 0.415, 0.405, 0.400, 0.395, 0.390};
     GLfloat dd = (N<4) ? 0.505 : 0.510;
     GLfloat ee = EE[N];
@@ -825,14 +890,13 @@ void putStickers(int i)
     }
 }
 
-void rotSlices()
-{
+void rotSlices() {
     if (tmp_act.mask == 0) {
         return;
     }
-    for (int i = 0; i < N*N*N; i++) {
+    for (int i = 0; i < N*N*N; ++i) {
         int axis_row = std::abs(tmp_act.axis) - 1;
-        slice[i] = static_cast<GLubyte>(cubic[i](axis_row, 3) + 0.5 * (N - 1));
+        slice[i] = static_cast<uint8_t>(cubic[i](axis_row, 3) + 0.5 * (N - 1));
     }
 
     det_act = tmp_act;
@@ -842,17 +906,76 @@ void rotSlices()
     rotating = true;
 }
 
-void rotRandom()
-{
-    static GLubyte rand_mask[20] = { 1, 2,  4, 3, 6,  8, 12, 14,  16, 24, 28,
-				32, 48,  7,  64, 96, 56,  128, 192, 112};
-    static GLbyte  rand_axis[6]  = {1, -1, 2, -2, 3, -3};
-    static int init = 0;
-    if (!init) {
-        srand((unsigned) time(NULL));
-        init=1;
-    }
-    tmp_act.mask = rand_mask[rand()%(2+3*(4-2))];//N=4
-    tmp_act.axis = rand_axis[rand()%6];
+void rotRandom() {
+    const std::array<uint8_t, 8> rand_mask = {1, 2, 4, 3, 6, 8, 12, 14};
+    const std::array<int, 6> rand_axis = {1, -1, 2, -2, 3, -3};
+    std::random_device rnd;
+    std::mt19937 mt(rnd());
+    std::uniform_int_distribution<> rand6(0, 5);
+    std::uniform_int_distribution<> rand8(0, 7);
+    tmp_act.axis = rand_axis[rand6(mt)];
+    tmp_act.mask = rand_mask[rand8(mt)];
     rotSlices();
+}
+
+void makeMotionsFromSolution(std::string& solution, std::string& init, std::string& solve) {
+    std::istringstream iss(solution);
+    std::string sub_str;
+    std::vector<std::string> str_vec;
+    while (iss >> sub_str) {
+        solve += dict.at(sub_str);
+        str_vec.push_back(sub_str);
+    }
+    for (auto it = str_vec.rbegin(); it != str_vec.rend(); ++it) {
+        init += inverse_dict.at(*it);
+    }
+}
+
+bool makeAction(unsigned char key) {
+    bool determined = false;
+    switch (key) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':{
+            tmp_act.mask |= (1 << (key-'1'));
+            break;
+        }
+        case 'j':{
+            tmp_act.axis = 1;
+            determined = true;
+            break;
+        }
+        case 'k':{
+            tmp_act.axis = 2;
+            determined = true;
+            break;
+        }
+        case 'l':{
+            tmp_act.axis = 3;
+            determined = true;
+            break;
+        }
+        case 'u':{
+            tmp_act.axis = -1;
+            determined = true;
+            break;
+        }
+        case 'i':{
+            tmp_act.axis = -2;
+            determined = true;
+            break;
+        }
+        case 'o':{
+            tmp_act.axis = -3;
+            determined = true;
+            break;
+        }
+    }
+
+    return determined;
 }
