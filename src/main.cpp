@@ -1,10 +1,22 @@
 #include "viewer.hpp"
 
-int main()
-{
+int main(int argc, char **argv) {
+    std::string solution;
+    bool is_first = true;
+    if (argc > 1) {
+        for (int i = 1; i < argc; ++i) {
+            if (!is_first) {
+                solution += " ";
+            }
+            else {
+                is_first = false;
+            }
+            solution += argv[i];
+        }
+    }
+
     MachineViewer viewer;
-    viewer.initTrackball();
-    viewer.initViewer();
+    viewer.initViewer(solution);
 
     while(viewer.isActive())
     {
@@ -13,8 +25,8 @@ int main()
         glLoadIdentity();
 
         viewer.updateCamera();
-        viewer.drawLight();
-        viewer.drawCube();
+        viewer.makeTrans();
+        viewer.drawMachine();
         viewer.swapBuffers();
 
         glfwPollEvents();

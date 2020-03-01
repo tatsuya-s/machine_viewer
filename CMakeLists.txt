@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(GLCube)
+project(machine-viewer)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_FLAGS "-Wall -Wno-error=deprecated-declarations -Wno-deprecated-declarations")
@@ -46,21 +46,12 @@ target_link_libraries(
 )
 
 add_executable(
-  cube 
-    src/cube.cpp) 
-target_link_libraries(
-  cube 
-    glm
-    ${OPENGL_LIBRARY} 
-    ${GLUT_LIBRARY}
-)
-
-add_executable(
-  glfw_app 
+  viewer 
     src/main.cpp
     src/viewer.cpp)
 target_link_libraries(
-  glfw_app 
+  viewer 
+    glm
     trackball
     ${OPENGL_LIBRARY}
     ${GLFW_LIBRARIES}
