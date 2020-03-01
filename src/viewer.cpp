@@ -6,11 +6,14 @@ MachineViewer::MachineViewer() :
     mouse_right_pressed(false), 
     shift_pressed(false),
     dangle(90.0 / 10),
-    slice_angle(0),
+    slice_angle(0.0),
+    rotate_angle(0.0), 
     scramble(0),
     rotating(false),
     skip_anim(false), 
-    auto_rotate(false)
+    auto_rotate(false), 
+    next_step(false),
+    is_ready(false)
 {
     if(!glfwInit()) {
         std::cerr << "glfwInit failed" << std::endl;
@@ -180,8 +183,7 @@ void MachineViewer::reshapeCallback() {
 }
 
 void MachineViewer::keyboardCallback(int key, int action) {
-    if (action == GLFW_PRESS) { // || action == GLFW_REPEAT)
-        std::cout << static_cast<unsigned char>(key) << std::endl;
+    if ((action == GLFW_PRESS) || (action == GLFW_REPEAT)) {
         if ((key == GLFW_KEY_LEFT_SHIFT) | (key == GLFW_KEY_RIGHT_SHIFT)) {
             shift_pressed = true;
         }
@@ -193,6 +195,9 @@ void MachineViewer::keyboardCallback(int key, int action) {
         }
         else if (key == GLFW_KEY_A) {
             auto_rotate = !auto_rotate;
+        }
+        else if (key == GLFW_KEY_ENTER) {
+            next_step = true;
         }
         else if (makeAction(key)) {
             rotSlices();
@@ -268,11 +273,6 @@ void MachineViewer::initTrackball() {
 }
 
 void MachineViewer::drawMachine() {
-    //glTranslatef(0, 0, -0.5);
-    glRotatef( 20, 1, 0, 0);
-    glRotatef(-20, 0, 1, 0);
-    glRotatef( -2, 0, 0, 1);
-
     drawAxis(0.055); // 55mm
     
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -803,17 +803,28 @@ bool MachineViewer::makeAction(int key) {
 }
 
 void MachineViewer::makeTrans() {
+    glRotatef( 20, 1, 0, 0);
+    glRotatef(-20, 0, 1, 0);
+    glRotatef( -2, 0, 0, 1);
+
     if ((!rotating) & solve_motion_it != solve_motion.end()) {
-        if (makeAction(*solve_motion_it)) {
+        if (!is_ready) {
+            is_ready = makeAction(*solve_motion_it++);
+        }
+        if (is_ready & next_step) {
+            next_step = false;
+            is_ready = false;
             rotSlices();
         }
-        solve_motion_it++;
     }
     else if ((!rotating) & (scramble > 0)) {
         rotRandom();
         scramble--;
     }
     if (auto_rotate) {
-        glRotatef(1, 0, 1, 0);
+        glRotatef(rotate_angle++, 0, 1, 0);
+    }
+    else {
+        glRotatef(rotate_angle, 0, 1, 0);
     }
 }

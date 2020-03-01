@@ -75,12 +75,15 @@ private:
     Action tmp_act, det_act;
     double dangle;
     double slice_angle;
+    double rotate_angle;
     int scramble;
     bool rotating;
     bool skip_anim;
     bool auto_rotate;
     std::string::iterator solve_motion_it;
     std::string solve_motion;
+    bool next_step;
+    bool is_ready;
 
     static constexpr std::array<float, 4> light_ambient  = { 0.0, 0.0, 0.0, 1.0 };
     static constexpr std::array<float, 4> light_diffuse  = { 1.0, 1.0, 1.0, 1.0 };
