@@ -63,7 +63,7 @@ void MachineViewer::initViewer(std::string& solution) {
     files.push_back("../obj/bc_l_tl.obj");
     files.push_back("../obj/bc_l_tr.obj");
     files.push_back("../obj/bc_l_bl.obj");
-    //files.push_back("../obj/bc_l_br.obj");
+    files.push_back("../obj/bc_l_br.obj");
     files.push_back("../obj/bc_r_body.obj");
     files.push_back("../obj/bc_r_tl.obj");
     files.push_back("../obj/bc_r_tr.obj");
