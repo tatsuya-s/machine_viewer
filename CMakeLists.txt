@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 project(GLCube)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_FLAGS "-Wall -Wno-error=deprecated-declarations -Wno-deprecated-declarations")
-set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wno-error=deprecated-declarations -Wno-deprecated-declarations")
+set(CMAKE_CXX_FLAGS "-Wall -Wno-error=deprecated-declarations -Wno-deprecated-declarations")
 
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)

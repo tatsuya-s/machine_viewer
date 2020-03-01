@@ -24,16 +24,16 @@ Eigen::Matrix4d modelview_matrix;
 
 std::vector<std::unique_ptr<GLMmodel>> models;
 
-const std::array<float, 4> light_ambient  = { 0.0, 0.0, 0.0, 1.0 };
-const std::array<float, 4> light_diffuse  = { 1.0, 1.0, 1.0, 1.0 };
-const std::array<float, 4> light_specular = { 1.0, 1.0, 1.0, 1.0 };
-const std::array<float, 4> light_position = { 1.0, 1.0, 1.0, 0.0 };
-const std::array<float, 4> mat_ambient    = { 0.7, 0.7, 0.7, 1.0 };
-const std::array<float, 4> mat_diffuse    = { 0.8, 0.8, 0.8, 1.0 };
-const std::array<float, 4> mat_specular   = { 1.0, 1.0, 1.0, 1.0 };
-const std::array<float, 1> high_shininess = { 100.0 };
+static constexpr std::array<float, 4> light_ambient  = { 0.0, 0.0, 0.0, 1.0 };
+static constexpr std::array<float, 4> light_diffuse  = { 1.0, 1.0, 1.0, 1.0 };
+static constexpr std::array<float, 4> light_specular = { 1.0, 1.0, 1.0, 1.0 };
+static constexpr std::array<float, 4> light_position = { 1.0, 1.0, 1.0, 0.0 };
+static constexpr std::array<float, 4> mat_ambient    = { 0.7, 0.7, 0.7, 1.0 };
+static constexpr std::array<float, 4> mat_diffuse    = { 0.8, 0.8, 0.8, 1.0 };
+static constexpr std::array<float, 4> mat_specular   = { 1.0, 1.0, 1.0, 1.0 };
+static constexpr std::array<float, 1> high_shininess = { 100.0 };
 
-const int N = 4;
+static constexpr int N = 4;
 std::array<Eigen::Matrix4d, N*N*N> cubic, prev_cubic;
 std::array<uint8_t, N*N*N> slice;
 Action tmp_act, det_act;
@@ -43,7 +43,7 @@ int scramble = 0;
 bool rotating = false;
 bool skip_anim = false;
 
-const std::array<Eigen::Vector3d, 7> axes = {
+inline static const std::array<Eigen::Vector3d, 7> axes = {
     Eigen::Vector3d( 0.0, 0.0,-1.0), 
     Eigen::Vector3d( 0.0,-1.0, 0.0), 
     Eigen::Vector3d(-1.0, 0.0, 0.0), 
@@ -53,7 +53,7 @@ const std::array<Eigen::Vector3d, 7> axes = {
     Eigen::Vector3d( 0.0, 0.0, 1.0)
 };
 
-const std::array<Eigen::Matrix4d, 7> trans = {
+inline static const std::array<Eigen::Matrix4d, 7> trans = {
     (Eigen::Matrix4d() << 0,-1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1).finished(),   /* -z */
     (Eigen::Matrix4d() << 0, 0, 1, 0,  0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 0, 1).finished(),   /* -y */
     (Eigen::Matrix4d() << 1, 0, 0, 0,  0, 0,-1, 0,  0, 1, 0, 0,  0, 0, 0, 1).finished(),   /* -x */
@@ -63,7 +63,7 @@ const std::array<Eigen::Matrix4d, 7> trans = {
     (Eigen::Matrix4d() << 0, 1, 0, 0, -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1).finished(),   /* +z */
 };
 
-const std::map<std::string, std::string> dict = {
+inline static const std::map<std::string, std::string> dict = {
     {"R'", "1j"}, 
     {"D'", "1k"}, 
     {"F'", "1l"}, 
@@ -114,7 +114,7 @@ const std::map<std::string, std::string> dict = {
     {"B", "4l"}
 };
 
-const std::map<std::string, std::string> inverse_dict = {
+inline static const std::map<std::string, std::string> inverse_dict = {
     {"R'", "1u"}, 
     {"D'", "1i"}, 
     {"F'", "1o"}, 
@@ -204,6 +204,7 @@ int main(int argc, char **argv) {
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_NORMALIZE);
+    glEnable(GL_CULL_FACE);
 
     std::vector<std::string> files;
     files.push_back("../obj/main.obj");
